@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="Tic Tac Toe Game">
+        <title>Tic Tac Toe</title>
+        <script type="text/javascript" src="js/jquery-2-2-0.js"></script>
+        <script type="text/javascript" src="js/bootstrap.js"></script>
+        <link rel="stylesheet" type="text/css" href="css/bootstrap.css" />
+        <link rel="stylesheet" type="text/css" href="css/main.css" />
+    </head>
+    <body>
+        <div class="modal fade" id="preModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+            <div class="modal-content">
+                <div class="modal-body">
+                    <div class="form-inline">
+                        <label for="rowsCount"> How many rows do you want to play <small>(3 to 9)</small>? </label>
+                        <input id="rowsCount" class="form-control" type="number" value="3" min="3" max="9" />
+                        <button id="goBtn" type="button" class="btn btn-success btn-sm">Go !</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="game">
+            <div class="container" style="padding: 2px;">
+              <button id="resetGameBtn" type="button" class="btn btn-primary btn-sm">Reset Game</button>
+              <button id="clearLogBtn" type="button" class="btn btn-default btn-sm">Clear Log</button>
+            </div>
+            <div class="container" style="padding: 2px;">
+                <textarea id="gameLog" cols="100" rows="3" class="form-control" disabled="disabled"></textarea>
+            </div>
+            <div id="board" style="padding-top: 4px;">
+                <table id="boardTbl"> </table>
+            </div>
+        </div>
+        <script type="text/javascript" src="js/main.js"></script>
+    </body>
+</html>
