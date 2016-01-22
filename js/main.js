@@ -7,8 +7,102 @@ Array.prototype.allValuesSame = function() {
     return true;
 }
 
+Array.prototype.countValuesOf = function(val) {
+    var res = 0;
+    for (var i = 0; i < this.length; i++)
+    {
+        if (this[i] === val) res++;
+    }
+    return res;
+}
+
 var AI = {
+    test: function(elem, index, arr) {
+        if ($.inArray('O', elem) === -1)
+        {
+            var total = elem.countValuesOf('X');
+            if (elem.length - total <= 1) {
+                console.log(elem);
+                return elem;
+            }
+        }
+    },
     
+    getDangerousCell: function() {
+        var res = null;
+        
+        var dRes = Game.getDiagonalResult();
+        for (var i = 0; i < dRes.length; i++)
+        {
+            var myTotal = dRes[i].countValuesOf('O');
+            var playerTotal = dRes[i].countValuesOf('X');
+            if (myTotal == 0 && dRes[i].length - playerTotal <= 1)
+            {
+                var emptyCellIndex = $.inArray('', dRes[i]);
+                if (i === 0)
+                {
+                    res = [emptyCellIndex, emptyCellIndex];
+                    break;
+                }
+                else if (i === 1)
+                {
+                    res = [emptyCellIndex, dRes[i].length - emptyCellIndex - 1];
+                    break;
+                }
+            }
+        }
+        if (res != null) return res;
+        
+        var vRes = Game.getVerticalResult();
+        for (var i = 0; i < vRes.length; i++)
+        {
+            var myTotal = vRes[i].countValuesOf('O');
+            var playerTotal = vRes[i].countValuesOf('X');
+            if (myTotal == 0 && vRes[i].length - playerTotal <= 1)
+            {
+                var emptyCellIndex = $.inArray('', vRes[i]);
+                res = [emptyCellIndex, i];
+                break;
+            }
+        }
+        if (res != null) return res;
+        
+        var hRes = Game.getHorizontalResult();
+        for (var i = 0; i < hRes.length; i++)
+        {
+            var myTotal = hRes[i].countValuesOf('O');
+            var playerTotal = hRes[i].countValuesOf('X');
+            if (myTotal == 0 && hRes[i].length - playerTotal <= 1)
+            {
+                var emptyCellIndex = $.inArray('', hRes[i]);
+                res = [i, emptyCellIndex];
+                break;
+            }
+        }
+        
+        return res;
+    },
+    
+    getCellOn: function(x, y) {
+        return $('#boardTbl > tr').eq(x).children('td').eq(y);
+    },
+    
+    getRandomNotSelectedCell: function() {
+        var $notSelectedCells = $('#boardTbl td:not(.selected)');
+        var randomIndex = Math.floor(Math.random() * $notSelectedCells.length);
+        return $notSelectedCells.eq(randomIndex);
+    },
+    
+    run: function() {
+        var dangerZone = AI.getDangerousCell();
+        console.log('danger zone: ' + dangerZone);
+        var $selectedCell = dangerZone == null ? AI.getRandomNotSelectedCell() : AI.getCellOn(dangerZone[0], dangerZone[1]);
+        
+        console.log('final cell: ' + ($selectedCell.data('row') - 1) + ' - ' + ($selectedCell.data('col') - 1 ));
+        
+        Game.select($selectedCell, 'O');
+        Game.currentMove++;
+    },
 };
 
 var Game = {
@@ -34,17 +128,42 @@ var Game = {
         }
     },
     
+    select: function(cell, mark) {
+        cell.addClass('selected').text(mark);
+        cell.off('click');
+        var res = Game.checkWinner();
+        if (res !== false)
+        {
+            if (res == 'O')
+            {
+                alert ('Computer wins !');
+            }
+            else if (res == 'X')
+            {
+                alert ('Player wins !');
+            }
+            Game.stop();
+        }
+        else if (Game.isTie())
+        {
+            alert('Tie');
+            Game.stop();
+        }
+    },
+    
     start: function() {
         Game.isRunning = true;
-        $('#boardTbl td').removeClass('selected')
+        Game.currentMove = 1;
+        $('#replayBtn').hide();
+        
+        $('#boardTbl td').removeClass('selected').text('')
         // Attaching the event handlers to every single table cells.
         .one('click', function(){
-            var text = Game.currentMove++ % 2 ? 'X' : 'O';
-            $(this).addClass('selected').text(text);
-            var res = Game.checkWinner();
-            if (res !== false)
-            {
-                Game.stop();
+            //var text = Game.currentMove++ % 2 ? 'X' : 'O';
+            Game.select( $(this), 'X' );
+            if (Game.isRunning) {
+                AI.run();
+                Game.currentMove++;
             }
         });
     },
@@ -52,6 +171,11 @@ var Game = {
     stop: function() {
         Game.isRunning = false;
         $('#boardTbl td').addClass('selected').off('click');
+        $('#replayBtn').show();
+    },
+    
+    isTie: function() {
+        return $('#boardTbl td:not(.selected)').length == 0;
     },
     
     checkWinner: function() {
@@ -169,10 +293,8 @@ function initPreGame()
 }
 
 $(function(){
-    
-    /*
     initPreGame();
-    */
+    /*
     $('#preModal').on('hidden.bs.modal', function () {
         initPreGame();
     }).modal({
@@ -184,5 +306,9 @@ $(function(){
     $("#goBtn").on('click', function(ev) {
         $("#preModal").modal('hide');
         ev.preventDefault();
+    });
+    */
+    $("#replayBtn").on('click', function(ev) {
+        Game.start();
     });
 });
