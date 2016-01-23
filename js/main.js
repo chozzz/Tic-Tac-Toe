@@ -49,7 +49,51 @@ var AI = {
             if (myTotal == 0 && hRes[i].length - playerTotal == 1)
                 return [i, emptyCellIndex];
         }
+        
+        return null;
+    },
 
+    getAdvantageousZone: function() {
+        var vRes = Game.getVerticalResult();
+        var hRes = Game.getHorizontalResult();
+        // Start of vertical and horizontal heuristic analysis.
+        // Find which array index that contains Player, and not Computer that has empty space for both Vertical and Horizontal.
+        // And return the only first one happening.
+        var vArrIdx = [];
+        var hArrIdx = [];
+        for (var i = 0; i < vRes.length; i++)
+        {
+            var myTotal = vRes[i].countValuesOf('O');
+            var playerTotal = vRes[i].countValuesOf('X');
+            var emptyCellIndex = $.inArray('', vRes[i]);
+            if (myTotal == 0 && playerTotal > 0)
+                vArrIdx.push(i);
+        }
+        for (var i = 0; i < hRes.length; i++)
+        {
+            var myTotal = hRes[i].countValuesOf('O');
+            var playerTotal = hRes[i].countValuesOf('X');
+            var emptyCellIndex = $.inArray('', hRes[i]);
+            if (myTotal == 0 && playerTotal > 0)
+                hArrIdx.push(i);
+        }
+        
+        for (var i = 0; i < vArrIdx.length; i++)
+        {
+            if ( $.inArray(vArrIdx[i], hArrIdx) !== false ) {
+                var res = [];
+                $('#boardTbl td:not(.selected)').each(function(){
+                    if ($(this).data('col') == vArrIdx[i]){
+                        res.push ( [$(this).data('row'), $(this).data('col')] );
+                    }
+                });
+                if (res.length > 0) {
+                    var randomIndex = Math.floor(Math.random() * res.length);
+                    return res[randomIndex];
+                }
+            }
+        }
+        // End of vertical and horizontal heuristic analysis.
         return null;
     },
     
@@ -92,23 +136,26 @@ var AI = {
 
         return null;
     },
-    
+
     getCellOn: function(x, y) {
         return $('#boardTbl > tr').eq(x).children('td').eq(y);
     },
-    
+
     getRandomNotSelectedCell: function() {
         var $notSelectedCells = $('#boardTbl td:not(.selected)');
         var randomIndex = Math.floor(Math.random() * $notSelectedCells.length);
         return $notSelectedCells.eq(randomIndex);
     },
-    
+
     getRandomCornerCell: function() {
         var $notSelectedCornerCells = $('#boardTbl td.corner:not(.selected)');
-        var randomIndex = Math.floor(Math.random() * $notSelectedCornerCells.length);
-        return $notSelectedCornerCells.eq(randomIndex);
+        if ($notSelectedCornerCells.length > 0) {
+            var randomIndex = Math.floor(Math.random() * $notSelectedCornerCells.length);
+            return $notSelectedCornerCells.eq(randomIndex);
+        }
+        return null;
     },
-    
+
     getMidCell: function() {
         if (Game.totalRows % 2 == 1)
         {
@@ -117,30 +164,109 @@ var AI = {
         }
         return null;
     },
+
+    countCornersOwnedBy: function(mark) {
+        var res = 0;
+        $('#boardTbl td.corner.selected').each(function(){
+            if ($(this).text() === mark) res++;
+        });
+        return res;
+    },
     
+    getRandomNotCornerCell: function() {
+        var res = [];
+        $("#boardTbl td:not(.corner):not(.selected)").each(function() {
+            res.push($(this));
+        });
+        if (res.length > 0) {
+            var randomIndex = Math.floor(Math.random() * res.length);
+            return res[randomIndex];
+        }
+        else return null;
+    },
+    
+    checkIfMarkExistOnCol: function(mark, col) {
+        var vRes = Game.getVerticalResult();
+        return vRes[col].countValuesOf(mark) > 0 ? true : false;
+    },
+    
+    checkIfMarkExistOnRow: function(mark, row) {
+        var hRes = Game.getHorizontalResult();
+        return hRes[row].countValuesOf(mark) > 0 ? true : false;
+    },
+    
+    getNotSelectedCornerIntersectedCellBy: function(mark) {
+        var res = null;
+        var $notSelectedCornerCells = $('#boardTbl td.corner:not(.selected)');
+        if ($notSelectedCornerCells.length > 0) {
+            $notSelectedCornerCells.each(function() {
+                var dataCol = $(this).data('col');
+                var dataRow = $(this).data('row');
+                if (AI.checkIfMarkExistOnCol(mark, dataCol) && AI.checkIfMarkExistOnRow(mark, dataRow)) {
+                    res = $(this);
+                }
+            });
+        }
+        return res;
+    },
+
     run: function() {
         var $selectedCell = null;
-        if (Game.currentMove <= 2 && Game.totalRows % 2 == 1)
+        
+        var recommendedZone = AI.getWinningZoneBy(1) || AI.getDangerousZone();
+        if (recommendedZone != null)
         {
-            // First turn and there's a mid column.
+            $selectedCell = AI.getCellOn(recommendedZone[0], recommendedZone[1]);
+        }
+        else
+        {
             var $midCell = this.getMidCell();
-            if ($midCell.text() === "X")
+            if ($midCell != null && $midCell.text() === '')
             {
-                $selectedCell = AI.getRandomCornerCell();
+                $selectedCell = $midCell;
+            }
+            else if ($midCell != null && $midCell.text() === 'O')
+            {
+                var totalPlayerCorner = AI.countCornersOwnedBy('X');
+                if (Game.currentMove <= 4 && totalPlayerCorner == 1) {
+                    // Get the corner where player mark intersects.
+                    $selectedCell = AI.getNotSelectedCornerIntersectedCellBy('X');
+                }
+                else if (Game.currentMove <= 4 && totalPlayerCorner == 2) {
+                    // Get the not corner.
+                    $selectedCell = AI.getRandomNotCornerCell();
+                }
+                else {
+                    recommendedZone = AI.getAdvantageousZone();
+                    if (recommendedZone != null)
+                        $selectedCell = AI.getCellOn(recommendedZone[0], recommendedZone[1]);
+                    else
+                        $selectedCell = AI.getRandomNotCornerCell() || AI.getRandomCornerCell();
+                }
             }
             else
             {
-                $selectedCell = $midCell;
+                if (Game.currentMove >= Game.totalRows * 2)
+                {
+                    recommendedZone = AI.getAdvantageousZone();
+                    if (recommendedZone != null)
+                        $selectedCell = AI.getCellOn(recommendedZone[0], recommendedZone[1]);
+                    else {
+                        $cornerCell = AI.getRandomCornerCell();
+                        $selectedCell = $cornerCell != null ? $cornerCell : AI.getRandomNotSelectedCell();
+                    }
+                }
+                else
+                {
+                    $cornerCell = AI.getRandomCornerCell();
+                    $selectedCell = $cornerCell != null ? $cornerCell : AI.getRandomNotSelectedCell();
+                }
             }
         }
         
         if ($selectedCell == null)
         {
-            var recommendedZone = AI.getWinningZoneBy(1) || AI.getDangerousZone();
-            if (recommendedZone != null)
-                $selectedCell = AI.getCellOn(recommendedZone[0], recommendedZone[1]);
-            else
-                $selectedCell = AI.getRandomNotSelectedCell();
+            console.log('This should not be happening !');
         }
         Game.select($selectedCell, 'O');
         Game.currentMove++;
@@ -162,7 +288,7 @@ var Game = {
             var tblRow = $("<tr>").attr('id', 'row_'+x);
             for (var y = 0; y < this.totalRows; y++)
             {
-                var tblCol = $("<td class='selected'>");
+                var tblCol = $("<td class='selected'>").data('row', x).data('col', y);
                 // Check if corner cell.
                 if ((x == 0 && y == 0) || (x == 0 && y == this.totalRows - 1) || 
                     (x == this.totalRows - 1 && y == 0) || 
@@ -176,7 +302,7 @@ var Game = {
     },
     
     select: function(cell, mark) {
-        cell.addClass('selected').text(mark);
+        cell.addClass('selected').text(mark).data('move', Game.currentMove);
         cell.off('click');
         var res = Game.checkWinner();
         if (res !== false)
@@ -184,11 +310,25 @@ var Game = {
             if (res == 'O') alert ('Computer wins !');
             else if (res == 'X')  alert ('Player wins !');
             Game.stop();
+            /*if (res == 'X') {
+                Game.isRunning = false;
+                console.log ('Player wins !');
+                Game.stop();
+            }
+            else if (res == 'O') {
+                Game.stop();
+                console.log ('Computer wins !');
+                Game.start();
+            }*/
+            
         }
         else if (Game.isTie())
         {
             alert('Tie');
             Game.stop();
+            /*console.log('Tie');
+            Game.stop();
+            Game.start();*/
         }
     },
     
@@ -198,6 +338,15 @@ var Game = {
         $('#replayBtn').hide();
         
         $('#boardTbl td').removeClass('selected win').text('')
+        /*.removeData('move');
+        while(Game.isRunning) {
+            $selectCell = AI.getRandomNotSelectedCell();;
+            Game.select( $selectCell, 'X' );
+            Game.currentMove++;
+            if (Game.isRunning)
+                AI.run();
+        }
+        */
         // Attaching the event handlers to every single table cells.
         .one('click', function(){
             Game.select( $(this), 'X' );
@@ -338,7 +487,7 @@ function initPreGame()
 }
 
 $(function(){
-    initPreGame();
+    //initPreGame();
 
     $('#preModal').on('hidden.bs.modal', function () {
         initPreGame();
