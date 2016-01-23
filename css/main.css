@@ -32,3 +32,8 @@ textarea {
 #boardTbl td:not(.selected):active {
     background-color: #5A547B;
 }
+
+#boardTbl td.win {
+    background-color: #8578CC;
+    color: #f0f0f0;
+}
