@@ -29,7 +29,7 @@ var AI = {
                     return [emptyCellIndex, dRes[i].length - emptyCellIndex - 1];
             }
         }
-        
+
         var vRes = Game.getVerticalResult();
         for (var i = 0; i < vRes.length; i++)
         {
@@ -39,7 +39,7 @@ var AI = {
             if (myTotal == 0 && vRes[i].length - playerTotal == 1)
                 return [emptyCellIndex, i];
         }
-        
+
         var hRes = Game.getHorizontalResult();
         for (var i = 0; i < hRes.length; i++)
         {
@@ -49,7 +49,7 @@ var AI = {
             if (myTotal == 0 && hRes[i].length - playerTotal == 1)
                 return [i, emptyCellIndex];
         }
-        
+
         return null;
     },
 
@@ -77,7 +77,7 @@ var AI = {
             if (myTotal == 0 && playerTotal > 0)
                 hArrIdx.push(i);
         }
-        
+
         for (var i = 0; i < vArrIdx.length; i++)
         {
             if ( $.inArray(vArrIdx[i], hArrIdx) !== false ) {
@@ -96,10 +96,10 @@ var AI = {
         // End of vertical and horizontal heuristic analysis.
         return null;
     },
-    
+
     getWinningZoneBy: function(numOfTurn) {
         var dRes = Game.getDiagonalResult();
-        for (var i = 0; i < dRes.length; i++) 
+        for (var i = 0; i < dRes.length; i++)
         {
             var myTotal = dRes[i].countValuesOf('O');
             var playerTotal = dRes[i].countValuesOf('X');
@@ -172,7 +172,7 @@ var AI = {
         });
         return res;
     },
-    
+
     getRandomNotCornerCell: function() {
         var res = [];
         $("#boardTbl td:not(.corner):not(.selected)").each(function() {
@@ -184,17 +184,17 @@ var AI = {
         }
         else return null;
     },
-    
+
     checkIfMarkExistOnCol: function(mark, col) {
         var vRes = Game.getVerticalResult();
         return vRes[col].countValuesOf(mark) > 0 ? true : false;
     },
-    
+
     checkIfMarkExistOnRow: function(mark, row) {
         var hRes = Game.getHorizontalResult();
         return hRes[row].countValuesOf(mark) > 0 ? true : false;
     },
-    
+
     getNotSelectedCornerIntersectedCellBy: function(mark) {
         var res = null;
         var $notSelectedCornerCells = $('#boardTbl td.corner:not(.selected)');
@@ -212,7 +212,7 @@ var AI = {
 
     run: function() {
         var $selectedCell = null;
-        
+
         var recommendedZone = AI.getWinningZoneBy(1) || AI.getDangerousZone();
         if (recommendedZone != null)
         {
@@ -263,7 +263,7 @@ var AI = {
                 }
             }
         }
-        
+
         if ($selectedCell == null)
         {
             console.log('This should not be happening !');
@@ -273,15 +273,16 @@ var AI = {
     },
 };
 
-var Game = {
+var selectTimeout,
+    Game = {
     currentMove: 1,
     totalRows: 3,
     isRunning: false,
-    
+
     createBoard: function() {
         // Empty the current board.
         $('#boardTbl').empty();
-        
+
         // Creating the table cells.
         for (var x = 0; x < this.totalRows; x++)
         {
@@ -290,8 +291,8 @@ var Game = {
             {
                 var tblCol = $("<td class='selected'>").data('row', x).data('col', y);
                 // Check if corner cell.
-                if ((x == 0 && y == 0) || (x == 0 && y == this.totalRows - 1) || 
-                    (x == this.totalRows - 1 && y == 0) || 
+                if ((x == 0 && y == 0) || (x == 0 && y == this.totalRows - 1) ||
+                    (x == this.totalRows - 1 && y == 0) ||
                     (x == this.totalRows - 1 && y == this.totalRows - 1))
                     tblCol.addClass('corner');
 
@@ -300,43 +301,49 @@ var Game = {
             $('#boardTbl').append(tblRow);
         }
     },
-    
+
     select: function(cell, mark) {
+        if (selectTimeout) {
+            clearTimeout(selectTimeout);
+        }
         cell.addClass('selected').text(mark).data('move', Game.currentMove);
         cell.off('click');
-        var res = Game.checkWinner();
-        if (res !== false)
-        {
-            if (res == 'O') alert ('Computer wins !');
-            else if (res == 'X')  alert ('Player wins !');
-            Game.stop();
-            /*if (res == 'X') {
-                Game.isRunning = false;
-                console.log ('Player wins !');
+        selectTimeout = setTimeout(function () {
+
+            var res = Game.checkWinner();
+            if (res !== false)
+            {
+                if (res == 'O') alert ('Computer wins !');
+                else if (res == 'X')  alert ('Player wins !');
                 Game.stop();
+                /*if (res == 'X') {
+                    Game.isRunning = false;
+                    console.log ('Player wins !');
+                    Game.stop();
+                }
+                else if (res == 'O') {
+                    Game.stop();
+                    console.log ('Computer wins !');
+                    Game.start();
+                }*/
+
             }
-            else if (res == 'O') {
+            else if (Game.isTie())
+            {
+                alert('Tie');
                 Game.stop();
-                console.log ('Computer wins !');
-                Game.start();
-            }*/
-            
-        }
-        else if (Game.isTie())
-        {
-            alert('Tie');
-            Game.stop();
-            /*console.log('Tie');
-            Game.stop();
-            Game.start();*/
-        }
+                /*console.log('Tie');
+                Game.stop();
+                Game.start();*/
+            }
+        }, 100);
     },
-    
+
     start: function() {
         Game.isRunning = true;
         Game.currentMove = 1;
         $('#replayBtn').hide();
-        
+
         $('#boardTbl td').removeClass('selected win').text('')
         /*.removeData('move');
         while(Game.isRunning) {
@@ -355,17 +362,17 @@ var Game = {
                 AI.run();
         });
     },
-    
+
     stop: function() {
         Game.isRunning = false;
         $('#boardTbl td').addClass('selected').off('click');
         $('#replayBtn').show();
     },
-    
+
     isTie: function() {
         return $('#boardTbl td:not(.selected)').length == 0;
     },
-    
+
     checkWinner: function() {
         // Check all horizontal lines
         var hRes = Game.getHorizontalResult();
@@ -377,7 +384,7 @@ var Game = {
                 return val;
             }
         }
-        
+
         // Check all vertical lines
         var vRes = Game.getVerticalResult();
         for (var c = 0; c < this.totalRows; c++)
@@ -390,7 +397,7 @@ var Game = {
                 return val;
             }
         }
-        
+
         // Check all diagonal lines.
         var dRes = Game.getDiagonalResult();
         for (var i = 0; i < dRes.length; i++)
@@ -412,32 +419,32 @@ var Game = {
                 return val;
             }
         }
-        
+
         return false;
     },
-    
+
     getDiagonalResult: function() {
         var diagonalVals = [];
-        
+
         var dArr1 = [];
         for (var i = 0; i < this.totalRows; i++)
         {
             var text = $('#boardTbl tr').eq(i).children('td').eq(i).text();
             dArr1.push(text);
         }
-        
+
         var dArr2 = [];
         for (var i = 0, x = this.totalRows - 1; x >= 0; x--)
         {
             var text = $('#boardTbl tr').eq(i++).children('td').eq(x).text();
             dArr2.push(text);
         }
-        
+
         diagonalVals.push(dArr1);
         diagonalVals.push(dArr2);
         return diagonalVals;
     },
-    
+
     getHorizontalResult: function() {
         var horizontalVals = [];
         for (var r = 0; r < this.totalRows; r++)
@@ -452,7 +459,7 @@ var Game = {
         }
         return horizontalVals;
     },
-    
+
     getVerticalResult: function() {
         var verticalVals = [];
         for (var r = 0; r < this.totalRows; r++)
@@ -494,9 +501,9 @@ $(function(){
     }).modal({
         keyboard: false
     });
-    
+
     $('#game').hide();
-    
+
     $("#goBtn").on('click', function(ev) {
         $("#preModal").modal('hide');
         ev.preventDefault();
