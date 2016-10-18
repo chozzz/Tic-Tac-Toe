@@ -336,7 +336,7 @@ var selectTimeout,
                 Game.stop();
                 Game.start();*/
             }
-        }, 100);
+        }, 250);
     },
 
     start: function() {
