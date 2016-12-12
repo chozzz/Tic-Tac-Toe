@@ -267,6 +267,7 @@ var AI = {
         if ($selectedCell == null)
         {
             console.log('This should not be happening !');
+            return;
         }
         Game.select($selectedCell, 'O');
         Game.currentMove++;
